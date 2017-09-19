@@ -1,57 +1,63 @@
 import fs from 'fs';
-import exifParser from 'exif-parser';
 import path from 'path';
+import moment from 'moment'
 
 const { COPYFILE_EXCL } = fs.constants;
 
-export default (libraryPath, storagePath) => {
-  let masterPath = path.join(libraryPath, '/Masters')
-  // let years = [];
-  // let months = [];
-  // let days = [];
-  // let times = [];
+const getPhotoPaths = (libraryPath) => {
   const allPhotos = [];
+  let masterPath = path.join(libraryPath, '/Masters')
 
-  fs.readdir(masterPath, 'utf-8', (err, years) => {
-    if (err) throw err;
+  let years = fs.readdirSync(masterPath);
   
-    years.forEach((year) => {
-      let yearPath = path.join(masterPath, year);
-      fs.readdir(yearPath, 'utf-8', (err, months) => {
-        if (err) throw err;
-          
-        months.forEach((month) => {
-          let monthPath = path.join(yearPath, month);
-          fs.readdir(monthPath, 'utf-8', (err, days) => {
-            if (err) throw err;
+  years.forEach((year) => {
+    let yearPath = path.join(masterPath, year);
+    let months = fs.readdirSync(yearPath);
+    
+    months.forEach((month) => {
+      let monthPath = path.join(yearPath, month);
+      let days = fs.readdirSync(monthPath);
 
-            days.forEach((day) => {
-              let dayPath = path.join(monthPath, day);
-              fs.readdir(dayPath, 'utf-8', (err, times) => {
-                if (err) throw err;
+      days.forEach((day) => {
+        let dayPath = path.join(monthPath, day);
+        let times = fs.readdirSync(dayPath);
 
-                times.forEach((time) => {
-                  let timePath = path.join(dayPath, time);
-                  fs.readdir(timePath, 'utf-8', (err, photos) => {
-                    if (err) throw err;
+        times.forEach((time) => {
+          let timePath = path.join(dayPath, time);
+          let photos = fs.readdirSync(timePath);
 
-                    photos.forEach((photo) => {
-                      let photoPath = path.join(timePath, photo);
-                      allPhotos.push(photoPath);
-                    })
-                  })
-                })
-              })
-            })
+          photos.forEach((photo) => {
+            let photoPath = path.join(timePath, photo);
+
+            // burst photos will be a directory at this point...
+            allPhotos.push(photoPath);
           })
         })
       })
     })
   })
 
+  return allPhotos;
+};
+
+const copyPhotos = (libraryPath, storagePath) => {
+  let photoPaths = getPhotoPaths(libraryPath);
+  photoPaths.forEach((photoPath) => {
+
+    let stats = fs.statSync(photoPath);
+    let date = stats.birthtime;
+    let pathPieces = photoPath.split('/');
+    let filename = pathPieces[pathPieces.length - 1];
+    let filenamePieces = filename.split('.');
+
+    let destinationPath = `${storagePath}/${filenamePieces[0]}_${moment(date).format('YYYY_MM_DD_HH_mm_ss')}.${filenamePieces[1]}`;
+    debugger;
+  })
+}
+
 // fs.copyFile('source.txt', 'destination.txt', (err) => {
 //   if (err) throw err;
-  //   console.log('source.txt was copied to destination.txt');
-  // });
-  console.log(allPhotos);
-};
+//   console.log('source.txt was copied to destination.txt');
+// });
+
+export default copyPhotos;

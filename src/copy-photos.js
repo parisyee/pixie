@@ -1,33 +1,40 @@
 import fs from 'fs';
 import path from 'path';
-import moment from 'moment'
 
 const { COPYFILE_EXCL } = fs.constants;
 
 const getPhotoPaths = (libraryPath) => {
   const allPhotos = [];
-  let masterPath = path.join(libraryPath, '/Masters')
+  const masterPath = path.join(libraryPath, '/Masters')
 
-  let years = fs.readdirSync(masterPath);
+  try {
+    fs.existsSync(masterPath);
+  } catch (e) {
+    alert(`Error: could not read path: ${masterPath}`);
+
+    return;
+  }
   
+  const years = fs.readdirSync(masterPath);
+
   years.forEach((year) => {
-    let yearPath = path.join(masterPath, year);
-    let months = fs.readdirSync(yearPath);
+    const yearPath = path.join(masterPath, year);
+    const months = fs.readdirSync(yearPath);
     
     months.forEach((month) => {
-      let monthPath = path.join(yearPath, month);
-      let days = fs.readdirSync(monthPath);
+      const monthPath = path.join(yearPath, month);
+      const days = fs.readdirSync(monthPath);
 
       days.forEach((day) => {
-        let dayPath = path.join(monthPath, day);
-        let times = fs.readdirSync(dayPath);
+        const dayPath = path.join(monthPath, day);
+        const times = fs.readdirSync(dayPath);
 
         times.forEach((time) => {
-          let timePath = path.join(dayPath, time);
-          let photos = fs.readdirSync(timePath);
+          const timePath = path.join(dayPath, time);
+          const photos = fs.readdirSync(timePath);
 
           photos.forEach((photo) => {
-            let photoPath = path.join(timePath, photo);
+            const photoPath = path.join(timePath, photo);
 
             // burst photos will be a directory at this point...
             allPhotos.push(photoPath);
@@ -41,23 +48,30 @@ const getPhotoPaths = (libraryPath) => {
 };
 
 const copyPhotos = (libraryPath, storagePath) => {
-  let photoPaths = getPhotoPaths(libraryPath);
-  photoPaths.forEach((photoPath) => {
+  const photoPaths = getPhotoPaths(libraryPath);
+  const totalPhotosCount = photoPaths.length;
 
-    let stats = fs.statSync(photoPath);
-    let date = stats.birthtime;
-    let pathPieces = photoPath.split('/');
-    let filename = pathPieces[pathPieces.length - 1];
-    let filenamePieces = filename.split('.');
+  if (photoPaths) {
+    try {
+      photoPaths.forEach((photoPath, i) => {
+        const pathPieces = photoPath.split('/');
+        const filename = pathPieces[pathPieces.length - 1];
+        const destinationPath = `${storagePath}/${filename}`;
 
-    let destinationPath = `${storagePath}/${filenamePieces[0]}_${moment(date).format('YYYY_MM_DD_HH_mm_ss')}.${filenamePieces[1]}`;
-    debugger;
-  })
-}
+        fs.copyFile(photoPath, destinationPath, COPYFILE_EXCL, (err) => {
+          if (err) throw err;
 
-// fs.copyFile('source.txt', 'destination.txt', (err) => {
-//   if (err) throw err;
-//   console.log('source.txt was copied to destination.txt');
-// });
+          console.log(
+            `Copied file ${i} of ${totalPhotosCount} - ${filename} from ${libraryPath} to ${storagePath}.`
+          );
+        });
+      });
+    } catch (e) {
+      alert(`Error: Could not copy files from ${libraryPath} to ${storagePath}`);
+    }
+  } else {
+    return;
+  }
+};
 
 export default copyPhotos;

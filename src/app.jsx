@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { remote } from 'electron';
 import storage from 'electron-json-storage';
-import copyPhotos from './copy-photos';
+import { copyPhotos } from './copy-photos';
 
 class App extends Component {
   constructor(props) {

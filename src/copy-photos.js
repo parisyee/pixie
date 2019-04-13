@@ -1,11 +1,43 @@
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
+import { exec } from "child_process";
 
 const { COPYFILE_EXCL } = fs.constants;
 
-const getPhotoPaths = (libraryPath) => {
+export const copyPhotos = (libraryPath, storagePath) => {
+  const photos = getPhotos(libraryPath);
+  const totalPhotosCount = photos.length;
+
+  if (photos) {
+    try {
+      photos.forEach((photo, i) => {
+        const pathPieces = photo.location.split("/");
+        const filename = pathPieces[pathPieces.length - 1];
+        const destinationPath = `${storagePath}/${filename}`;
+        const timecode = photo.time.replace("-", "")
+          .replace(/(\d\d)$/, (match) => { return `.${match}` });
+
+        fs.copyFile(photo.location, destinationPath, COPYFILE_EXCL, (err) => {
+          if (err) throw err;
+
+          exec(`touch -a -m -t ${timecode} ${destinationPath}`)
+
+          console.log(
+            `Copied file ${i} of ${totalPhotosCount} - ${filename} from ${libraryPath} to ${storagePath}.`
+          );
+        });
+      });
+    } catch (e) {
+      alert(`Error: Could not copy files from ${libraryPath} to ${storagePath}`);
+    }
+  } else {
+    return;
+  }
+};
+
+const getPhotos = (libraryPath) => {
   const allPhotos = [];
-  const masterPath = path.join(libraryPath, '/Masters')
+  const masterPath = path.join(libraryPath, "/Masters")
 
   try {
     fs.existsSync(masterPath);
@@ -37,41 +69,13 @@ const getPhotoPaths = (libraryPath) => {
             const photoPath = path.join(timePath, photo);
 
             // burst photos will be a directory at this point...
-            allPhotos.push(photoPath);
-          })
-        })
-      })
-    })
-  })
+            allPhotos.push({ location: photoPath, time });
+          });
+        });
+      });
+    });
+  });
 
   return allPhotos;
 };
 
-const copyPhotos = (libraryPath, storagePath) => {
-  const photoPaths = getPhotoPaths(libraryPath);
-  const totalPhotosCount = photoPaths.length;
-
-  if (photoPaths) {
-    try {
-      photoPaths.forEach((photoPath, i) => {
-        const pathPieces = photoPath.split('/');
-        const filename = pathPieces[pathPieces.length - 1];
-        const destinationPath = `${storagePath}/${filename}`;
-
-        fs.copyFile(photoPath, destinationPath, COPYFILE_EXCL, (err) => {
-          if (err) throw err;
-
-          console.log(
-            `Copied file ${i} of ${totalPhotosCount} - ${filename} from ${libraryPath} to ${storagePath}.`
-          );
-        });
-      });
-    } catch (e) {
-      alert(`Error: Could not copy files from ${libraryPath} to ${storagePath}`);
-    }
-  } else {
-    return;
-  }
-};
-
-export default copyPhotos;

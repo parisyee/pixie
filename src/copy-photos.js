@@ -4,8 +4,8 @@ import { exec } from "child_process";
 
 const { COPYFILE_EXCL } = fs.constants;
 
-export const copyPhotos = (libraryPath, storagePath) => {
-  const photos = getPhotos(libraryPath);
+export const copyPhotos = (libraryPath, storagePath, fromDate) => {
+  const photos = getPhotos(libraryPath, fromDate);
   const totalPhotosCount = photos.length;
 
   if (photos) {
@@ -35,8 +35,7 @@ export const copyPhotos = (libraryPath, storagePath) => {
   }
 };
 
-const getPhotos = (libraryPath) => {
-  const allPhotos = [];
+const getPhotos = (libraryPath, fromDate) => {
   const masterPath = path.join(libraryPath, "/Masters")
 
   try {
@@ -46,7 +45,8 @@ const getPhotos = (libraryPath) => {
 
     return;
   }
-  
+
+  const allPhotos = [];
   const years = fs.readdirSync(masterPath);
 
   years.forEach((year) => {
@@ -58,6 +58,10 @@ const getPhotos = (libraryPath) => {
       const days = fs.readdirSync(monthPath);
 
       days.forEach((day) => {
+        if (fromDate && !dateInFromRange(year, month, day, fromDate)) {
+          return;
+        }
+
         const dayPath = path.join(monthPath, day);
         const times = fs.readdirSync(dayPath);
 
@@ -79,3 +83,9 @@ const getPhotos = (libraryPath) => {
   return allPhotos;
 };
 
+const dateInFromRange = (y, m, d, fromDate) => {
+  const date = new Date(`${y}-${m}-${d}`);
+  const dateFrom = new Date(fromDate);
+
+  return (date >= dateFrom);
+}
